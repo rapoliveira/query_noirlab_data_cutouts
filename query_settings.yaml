@@ -1,0 +1,11 @@
+schema_name: smash_dr2
+table_name: object
+method: service.search  # options: service.search, async, async_delete
+
+type: cluster  # options: SMASH field, cluster, coordinates, list of coords
+object: HW77  # If list of coords, provide path to file
+radius: 0.0833  # in degrees, float type
+
+tabs_path: tables/
+cats_path: catalogs/
+figs_path: figures/
