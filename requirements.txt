@@ -1,0 +1,4 @@
+astropy>=5.0
+numpy>=1.24
+pyvo>=1.2
+PyYAML>=6.0

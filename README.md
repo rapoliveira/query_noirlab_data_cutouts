@@ -27,6 +27,8 @@ As it is, the YAML file will download data from the `smash_dr2.object`, using th
 
 ## Example figures: CMD and cutout image
 
+No figures are saved yet, but below there is an example of CMD and cutout image to be implemented in this code.
+
 <table>
   <tr>
     <td><img src="figures/example_cmd.png" alt="CMD 1" width="300"></td>
