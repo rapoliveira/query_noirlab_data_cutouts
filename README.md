@@ -1,6 +1,7 @@
-# Query NOIRLab database to get catalogs and image cutouts
+# Query NOIRLab database: catalogs and image cutouts
 
 This repository contains tools for querying the **NOIRLab Data Lab** (e.g., SMASH DR2, Gaia EDR3) and retrieving the catalogs and image cutouts around sky coordinates.
+The query is done with the `service.search()` method from the `pyvo` library, using an ADQL format to make a cone search.
 
 ## Features
 

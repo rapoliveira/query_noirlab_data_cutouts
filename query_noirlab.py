@@ -142,15 +142,15 @@ def download_data(db, RA, DEC, rad):
     # NOIRLAB API: https://astroarchive.noirlab.edu/api/docs/
     # VO-TapService (https://pyvo.readthedocs.io/en/stable/)
     """
+    start1 = datetime.now()
     service = vo.dal.TAPService('https://datalab.noirlab.edu/tap')
     adql = '''SELECT *
     FROM %s
         WHERE
             't'= Q3C_RADIAL_QUERY(ra,dec,%.5f,%.5f,%.3f)
     ''' % (db, RA, DEC, rad)
-    start1 = datetime.now()
-
     result_set = service.search(adql, maxrec=100000)
+
     sec_column = np.zeros(len(result_set))
     for i in range(len(result_set)):
         sec_column[i] = result_set[i]['ra']
