@@ -9,9 +9,10 @@ The query is done with the `service.search()` method from the `pyvo` library, us
 - Retrieve metadata and catalogs for selected objects.
 - Download image cutouts centered on RA/Dec with configurable size.
 
-A YAML file is used to change the input parameters.
-So far, it is only possible to download an entire SMASH field (numbered from 1 to 247) or input the name of a cluster listed in Bica catalogues.
-The coordinates (or a file with a list of coordinates) or the name of any cluster (to be searched in Vizier) will be made available soon.
+A YAML file is used to define the input parameters.
+At the moment, it is only possible to download an entire [SMASH field](https://github.com/rapoliveira/query_noirlab_data_cutouts/blob/main/tables/TAP-List-of-Fields.fits) (numbered from 1 to 247) or input the name of a cluster listed in Bica catalogues.
+Support for using coordinates (or a file with multiple coordinates) and for searching any cluster through Vizier will be added soon.
+
 
 ## Installation and usage
 
