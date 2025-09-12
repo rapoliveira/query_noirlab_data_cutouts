@@ -39,17 +39,20 @@ def main():
     validate_survey(data_name)
     rad = validate_radius(settings['radius'])
     if settings['type'] == "SMASH field":
-        info = get_smash_field(path, settings, rad)
+        info = [get_smash_field(path, settings, rad)]
     elif settings['type'] == "cluster":
-        info = get_cluster_coords(path, settings, rad)
+        info = [get_cluster_coords(path, settings, rad)]
     elif settings['type'] == "coordinates":
-        info = validate_coordinates(settings['object'], rad)
+        info = [validate_coordinates(settings['object'], rad)]
+    elif settings['type'] == 'list of coords':
+        info = read_coords_list(path, settings, rad)
     else:
         raise NotImplementedError("Type must be 'SMASH field' or 'cluster'.")
 
-    table = download_data(data_name, info[0], info[1], rad)
-    fname = settings["schema_name"] + '_' + info[2]  # still to improve...
-    table = save_cat(table, fname, path)
+    for item in info:
+        table = download_data(data_name, item[0], item[1], rad)
+        fname = settings["schema_name"] + '_' + item[2]  # still to improve...
+        table = save_cat(table, fname, path)
     print()
 
 
@@ -150,6 +153,25 @@ def validate_coordinates(coord_str, radius):
             f"_{str(radius).replace('.','p')}deg"
 
     return (coord.ra.degree, coord.dec.degree, fname)
+
+
+def read_coords_list(path, settings, radius):
+    """
+    Read a list of coordinates from a file and return a list with RA, DEC,
+    and filename for each coordinate.
+    """
+    path = os.path.join(path, settings['object'])
+    if not os.path.isfile(path):
+        raise FileNotFoundError(f"File {settings['object']} not found!")
+    with open(path, 'r', encoding='utf-8') as f:
+        lines = f.readlines()
+
+    info_lst = []
+    for line in lines:
+        if line.strip() and not line.startswith('#'):
+            info_lst.append(validate_coordinates(line, radius))
+
+    return info_lst
 
 
 def download_data(db, RA, DEC, rad):
