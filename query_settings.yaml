@@ -2,9 +2,16 @@ schema_name: smash_dr2
 table_name: object
 method: service.search  # options: service.search, async, async_delete
 
-type: cluster  # options: SMASH field, cluster, coordinates, list of coords
-object: HW77  # If list of coords, provide path to file
-radius: 0.0833  # in degrees, float type
+# Target type: SMASH field, cluster, coordinates, list of coords
+type: coordinates
+
+# Object identifier depending on type:
+# - SMASH field: integer 1–247
+# - cluster: cluster name to be checked in Bica catalogues or Simbad
+# - coordinates: RA DEC in any format accepted by Simbad
+# - list of coords: path to file with a list of RA DEC values (TBD...)
+object: 01 20 11.0 -72 37 19
+radius: 0.0833  # in degrees
 
 tabs_path: tables/
 cats_path: catalogs/

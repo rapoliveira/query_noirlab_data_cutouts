@@ -18,8 +18,10 @@ import warnings
 
 # Third-party imports
 from astropy import units as u
+from astropy.coordinates import SkyCoord
 from astropy.table import Table, vstack
 from astropy.utils.exceptions import AstropyWarning
+from astroquery.utils import parse_coordinates
 import numpy as np
 import pyvo as vo
 import yaml
@@ -40,6 +42,8 @@ def main():
         info = get_smash_field(path, settings, rad)
     elif settings['type'] == "cluster":
         info = get_cluster_coords(path, settings, rad)
+    elif settings['type'] == "coordinates":
+        info = validate_coordinates(settings['object'], rad)
     else:
         raise NotImplementedError("Type must be 'SMASH field' or 'cluster'.")
 
@@ -95,9 +99,9 @@ def get_smash_field(path, settings, radius):
 
     id, ra, dec = line['fieldid'].item(), line['ra'].item(), line['dec'].item()
     fname = f"TAP_f{id}_{str(radius).replace('.','p')}deg"
-    msg = f"Field {id} (RA {ra:.5f}, DEC {dec:.5f}), rad = {radius:.3f} deg?"
+    settings['object'] = "Field " + str(id)
 
-    return (ra, dec, fname, msg)
+    return (ra, dec, fname)
 
 
 def get_cluster_coords(path, settings, radius):
@@ -125,9 +129,27 @@ def get_cluster_coords(path, settings, radius):
     ra = float(bicao['_RAJ2000'][idx].item())
     dec = float(bicao['_DEJ2000'][idx].item())
     fname = f"{obj_id.replace(' ','')}_{str(radius).replace('.','p')}deg"
-    msg = f"{obj_id} (RA {ra:.5f}, Dec {dec:.5f}), rad = {radius:.3f}?"
 
-    return ra, dec, fname, msg
+    return (ra, dec, fname)
+
+
+def validate_coordinates(coord_str, radius):
+    """
+    Validate and return RA, DEC, and filename for given coordinates.
+    """
+    coord_str = coord_str.strip()
+    if coord_str.count(' ') >= 3 or coord_str.count(':') >= 2:
+        coord = SkyCoord(coord_str, unit=(u.hourangle, u.deg))
+    else:
+        coord = parse_coordinates(coord_str)
+
+    ra_str = coord.ra.to_string(unit=u.hour, sep='', pad=True, precision=2)
+    dec_str = coord.dec.to_string(unit=u.deg,  sep='', pad=True, precision=1,
+                                  alwayssign=True)
+    fname = "J" + ra_str.replace('.', 'p') + dec_str.replace('.', 'p') + \
+            f"_{str(radius).replace('.','p')}deg"
+
+    return (coord.ra.degree, coord.dec.degree, fname)
 
 
 def download_data(db, RA, DEC, rad):
