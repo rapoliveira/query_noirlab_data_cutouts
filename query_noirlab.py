@@ -37,21 +37,24 @@ def main():
 
     data_name = settings['schema_name'] + '.' + settings['table_name']
     validate_survey(data_name)
-    rad = validate_radius(settings['radius'])
+    shape, size = validate_shape_and_size(settings)
     if settings['type'] == "SMASH field":
-        info = [get_smash_field(path, settings, rad)]
+        info = [get_smash_field(path, settings)]
     elif settings['type'] == "cluster":
-        info = [get_cluster_coords(path, settings, rad)]
+        info = [get_cluster_coords(path, settings)]
     elif settings['type'] == "coordinates":
-        info = [validate_coordinates(settings['object'], rad)]
+        info = [validate_coordinates(settings['object'])]
     elif settings['type'] == 'list of coords':
-        info = read_coords_list(path, settings, rad)
+        info = read_coords_list(path, settings)
     else:
         raise NotImplementedError("Type must be 'SMASH field' or 'cluster'.")
 
-    for item in info:
-        table = download_data(data_name, item[0], item[1], rad)
-        fname = settings["schema_name"] + '_' + item[2]  # still to improve...
+    # This line needs to be fixed for box shape!!!
+    # fname_suffix = shape[0] + str(size).replace('.', 'p') + "deg"
+    fname_suffix = shape[0] + str(size[0]).replace('.', 'p') + "deg"
+    for item in info[:1]:
+        table = download_data(data_name, item[0], item[1], shape, size)
+        fname = settings["schema_name"] + item[2] + fname_suffix
         table = save_cat(table, fname, path)
     print()
 
@@ -78,19 +81,30 @@ def validate_survey(data_full_name):
         sys.exit()
 
 
-def validate_radius(radius):
+def validate_shape_and_size(settings):
     """
-    Validate and return the radius input.
+    Validate and return the shape and size inputs.
     """
-    if not isinstance(radius, (int, float)):
-        raise TypeError("Radius must be a number.")
-    if radius <= 0 or radius > 1.5:
-        raise ValueError("Radius must be > 0 and <= 1.5 deg.")
+    shape = settings.get('shape', 'circle').lower()
+    if shape not in ['circle', 'box']:
+        raise ValueError("Shape must be 'circle' or 'box'.")
 
-    return radius
+    region_size = settings['region_size']
+    if isinstance(region_size, (int, float)):
+        values = [region_size]
+    elif isinstance(region_size, (list, tuple)):
+        values = [v for x in region_size
+                  for v in (x if isinstance(x, (list, tuple)) else [x])]
+    else:
+        raise TypeError("region_size must be a number or list of numbers.")
+
+    if not all(isinstance(v, (int, float)) and 0 < v <= 1.5 for v in values):
+        raise ValueError("region_size values must be between 0 and 1.5 deg.")
+
+    return shape, region_size
 
 
-def get_smash_field(path, settings, radius):
+def get_smash_field(path, settings):
     """
     Get RA, DEC, filename and message for a given SMASH field.
     """
@@ -101,13 +115,13 @@ def get_smash_field(path, settings, radius):
     line = fields[fields['fieldid'] == settings['object']]
 
     id, ra, dec = line['fieldid'].item(), line['ra'].item(), line['dec'].item()
-    fname = f"TAP_f{id}_{str(radius).replace('.','p')}deg"
+    fname = f"_TAP_f{id}_"
     settings['object'] = "Field " + str(id)
 
     return (ra, dec, fname)
 
 
-def get_cluster_coords(path, settings, radius):
+def get_cluster_coords(path, settings):
     """
     Get coordinates of a cluster from Bica catalogues.
 
@@ -131,12 +145,12 @@ def get_cluster_coords(path, settings, radius):
     idx = np.array([obj_id in item for item in names])
     ra = float(bicao['_RAJ2000'][idx].item())
     dec = float(bicao['_DEJ2000'][idx].item())
-    fname = f"{obj_id.replace(' ','')}_{str(radius).replace('.','p')}deg"
+    fname = f"_{obj_id.replace(' ','')}_"
 
     return (ra, dec, fname)
 
 
-def validate_coordinates(coord_str, radius):
+def validate_coordinates(coord_str):
     """
     Validate and return RA, DEC, and filename for given coordinates.
     """
@@ -149,13 +163,12 @@ def validate_coordinates(coord_str, radius):
     ra_str = coord.ra.to_string(unit=u.hour, sep='', pad=True, precision=2)
     dec_str = coord.dec.to_string(unit=u.deg,  sep='', pad=True, precision=1,
                                   alwayssign=True)
-    fname = "J" + ra_str.replace('.', 'p') + dec_str.replace('.', 'p') + \
-            f"_{str(radius).replace('.','p')}deg"
+    fname = "_J" + ra_str.replace('.', 'p') + dec_str.replace('.', 'p') + "_"
 
-    return (coord.ra.degree, coord.dec.degree, fname)
+    return (round(coord.ra.deg, 5), round(coord.dec.deg, 5), fname)
 
 
-def read_coords_list(path, settings, radius):
+def read_coords_list(path, settings):
     """
     Read a list of coordinates from a file and return a list with RA, DEC,
     and filename for each coordinate.
@@ -169,12 +182,12 @@ def read_coords_list(path, settings, radius):
     info_lst = []
     for line in lines:
         if line.strip() and not line.startswith('#'):
-            info_lst.append(validate_coordinates(line, radius))
+            info_lst.append(validate_coordinates(line))
 
     return info_lst
 
 
-def download_data(db, RA, DEC, rad):
+def download_data(db, RA, DEC, shape, size):
     """
     Download data from the NOIRLab database, using the service.search()
     function from the pyvo library.
@@ -188,11 +201,22 @@ def download_data(db, RA, DEC, rad):
     """
     start1 = datetime.now()
     service = vo.dal.TAPService('https://datalab.noirlab.edu/tap')
-    adql = '''SELECT *
-    FROM %s
+
+    if shape == "circle":
+        adql = '''SELECT *
+        FROM %s
+            WHERE
+                't'= Q3C_RADIAL_QUERY(ra,dec,%.5f,%.5f,%.3f)
+        ''' % (db, RA, DEC, size)
+    elif shape == "box":
+        delta_ra = size[0] / np.cos(np.radians(DEC))
+        adql = f"""
+        SELECT *
+        FROM {db}
         WHERE
-            't'= Q3C_RADIAL_QUERY(ra,dec,%.5f,%.5f,%.3f)
-    ''' % (db, RA, DEC, rad)
+            ra BETWEEN {RA - delta_ra} AND {RA + delta_ra}
+            AND dec BETWEEN {DEC - size[1]} AND {DEC + size[1]}
+        """
     result_set = service.search(adql, maxrec=100000)
 
     sec_column = np.zeros(len(result_set))

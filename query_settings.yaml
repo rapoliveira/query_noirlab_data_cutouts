@@ -10,8 +10,11 @@ type: list of coords
 # - cluster: cluster name to be checked in Bica catalogues or Simbad
 # - coordinates: RA DEC in any format accepted by Simbad
 # - list of coords: path to file with RA DEC values (e.g. coords_list.txt)
-object: coords_list.txt
-radius: 0.0833  # in degrees
+object: target_list_2025B/target_list_2025B_coords.txt
+
+# Field of view properties (ADD MORE EXPLANATIONS...)
+shape: box  # options: circle, box. TBD: polygon, ellipse
+region_size: [0.0266, 0.0266]  # in degrees
 
 tabs_path: tables/
 cats_path: catalogs/
