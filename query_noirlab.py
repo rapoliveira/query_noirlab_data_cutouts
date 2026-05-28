@@ -51,7 +51,8 @@ def main():
 
     # This line needs to be fixed for box shape!!!
     # fname_suffix = shape[0] + str(size).replace('.', 'p') + "deg"
-    fname_suffix = shape[0] + str(size[0]).replace('.', 'p') + "deg"
+    size_str = str(size) if isinstance(size, (int, float)) else str(size[0])
+    fname_suffix = shape[0] + size_str.replace('.', 'p') + "deg"
     for item in info[:1]:
         table = download_data(data_name, item[0], item[1], shape, size)
         fname = settings["schema_name"] + item[2] + fname_suffix
